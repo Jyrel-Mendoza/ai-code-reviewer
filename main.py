@@ -1,5 +1,5 @@
 from analyzer.static_tools import run_flake8, run_pylint
-from analyzer.parser import flake8_parser_output
+from analyzer.parser import flake8_parser_output, pylint_parser_output
 
 
 if __name__ == "__main__":
@@ -13,7 +13,8 @@ if __name__ == "__main__":
         print(issue)
 
     pylint_raw_output = run_pylint(path_to_check)
+    pylint_issues = pylint_parser_output(pylint_raw_output)
 
     print("\nPylint Output: ")
-    for line in pylint_raw_output:
-        print(line)
+    for issue in pylint_issues:
+        print(issue)
