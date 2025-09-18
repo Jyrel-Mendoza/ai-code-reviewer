@@ -1,27 +1,35 @@
-import openai
+from openai import OpenAI, OpenAIError, RateLimitError
+from dotenv import load_dotenv
+from pathlib import Path
+import os
 
-import openai
 
-class LLMReviewer:
-    def __init__(self, api_key):
-        openai.api_key = api_key
+# Resolve path to utils/.env
+env_path = Path(__file__).resolve().parent.parent / "utils" / ".env"
+load_dotenv(dotenv_path=env_path)
+print("Loaded key:", os.getenv("OPENAI_API_KEY"))
 
-    def review_code(self, code_content, diagnostics):
-        prompt = f"""
-You are an expert Python code reviewer. Given the code and static analysis output,
-provide concise, actionable feedback.
+# Mock is in my .env file!
+class OpenAIReviewer:
+    def __init__(self, api_key=None):
+        self.mock = os.getenv("MOCK_LLM", "false").lower() == "true"
+        if not self.mock:
+            self.client = OpenAI(api_key=api_key or os.getenv("OPENAI_API_KEY"))
 
-Code:
-{code_content}
+    def review(self, code_content, diagnostics):
+        if self.mock:
+            # Fake response for testing
+            return f"🔧 Mock feedback: Found {len(code_content.splitlines())} lines of code and {len(diagnostics)} diagnostics."
+        
+        try:
+            response = self.client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0,
+            )
+            return response.choices[0].message.content
 
-Static Analysis:
-{diagnostics}
-
-Respond with bullet points.
-"""
-        response = openai.ChatCompletion.create(
-            model="gpt-4o-mini",  # going to use this model for now, going to change in the future
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0
-        )
-        return response.choices[0].message["content"]
+        except RateLimitError:
+            return "❌ Rate limit or quota exceeded. Please check your OpenAI plan/billing."
+        except OpenAIError as e:
+            return f"❌ OpenAI API error: {str(e)}"
